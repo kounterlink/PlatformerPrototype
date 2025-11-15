@@ -4,8 +4,8 @@ enum States {IDLE, WALKING, RUNNING, JUMPING, FALLING, ROLLING, POUNDING}
 
 var state = States.IDLE
 
-@export var speed = 200
-@export var maxSpeed = 300
+@export var speed = 300
+@export var maxSpeed = 350
 @export var jumpVelocity = -700
 @export var jumpLimit = 1
 const GRAVITY = 1200
@@ -24,7 +24,7 @@ func _physics_process(delta):
 		jumpCount = 0
 		state = States.IDLE
 
-	var direction = Input.get_vector('LEFT', 'RIGHT', 'UP', 'DOWN')
+	var direction = Input.get_axis('LEFT', 'RIGHT')
 
 	if (state == States.POUNDING):
 		if (Input.is_action_just_pressed('ROLL')):
@@ -46,7 +46,7 @@ func _physics_process(delta):
 			canJump = true
 			if (state == States.FALLING or state == States.JUMPING):
 				jumpCount = 0
-				if (direction == Vector2.ZERO):
+				if (direction == 0):
 					state = States.IDLE
 				else:
 					state = States.WALKING
@@ -60,14 +60,14 @@ func _physics_process(delta):
 
 			# doing actual movement
 
-			if (direction != Vector2.ZERO):
+			if (direction != 0):
 				if (state != States.JUMPING and state != States.FALLING):
 					state = States.WALKING
-				velocity.x = direction.x * speed
+				velocity.x = move_toward(velocity.x, direction * speed, maxSpeed * delta)
 			else:
 				if (state != States.JUMPING and state != States.FALLING):
 					state = States.IDLE
-				velocity.x = 0
+				velocity.x = move_toward(velocity.x, 0, maxSpeed * 2.0 * delta)
 	# this needs to be here for everything to work xd
 
 	move_and_slide()
@@ -82,5 +82,5 @@ func jump():
 		velocity.y = jumpVelocity
 
 func roll():
-  # didn't add this yet
+	# didn't add this yet
 	pass
