@@ -27,12 +27,16 @@ const MAX_GRAVITY = 1300
 var dynamicGravity = GRAVITY
 var jumpCount = 0
 
+const COYOTE_TIME = 0.3
+var coyoteTimer = COYOTE_TIME
+
 @onready var sprite = $Sprite2D
+@onready var jumpChecker: RayCast2D = $JumpCheck
 
 func _physics_process(delta):
     var direction = Input.get_axis('LEFT', 'RIGHT')
 
-    handleStates()
+    handleStates(delta)
     gravity(delta)
     movement(delta, direction)
     jump()
@@ -41,12 +45,13 @@ func _physics_process(delta):
 
     move_and_slide()
 
-func handleStates():
+func handleStates(delta):
     # landing
     if (is_on_floor() and state in [States.JUMPING, States.FALLING, States.POUNDING]):
         state = States.IDLE
         jumpCount = 0
         dynamicGravity = GRAVITY
+        coyoteTimer = COYOTE_TIME
 
     # state permissions
     if (state == States.IDLE):
@@ -82,9 +87,17 @@ func handleStates():
         print("FALLING")
         canWalk = true
         canRun = true
-        canJump = false
+        if (coyoteTimer > 0):
+            canJump = true
+            coyoteTimer -= delta
+        else:
+            canJump = false
         canRoll = true
         canPound = true
+
+        if jumpChecker.is_colliding():
+            canJump = true
+            jumpCount = 0
     elif (state == States.POUNDING):
         print("POUNDING")
         canWalk = false
@@ -125,6 +138,7 @@ func movement(delta, direction):
 func jump():
     if (Input.is_action_just_pressed('JUMP')):
         if (canJump and jumpCount < jumpLimit):
+            coyoteTimer = 0
             velocity.y = jumpVelocity
             jumpCount += 1
             state = States.JUMPING
@@ -147,7 +161,7 @@ func roll():
             state = States.ROLLING
             var roll_direction = -1 if sprite.flip_h else 1
             velocity.x += roll_direction * rollSpeed
-            await get_tree().create_timer(rollDuration, false, false, true).timeout
+            await get_tree().create_timer(rollDuration).timeout
             if (is_on_floor()):
                 state = States.IDLE
             else:

@@ -16,3 +16,6 @@ texture = ExtResource("1_xhfnw")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CapsuleShape2D_kpjcp")
+
+[node name="JumpCheck" type="RayCast2D" parent="."]
+target_position = Vector2(0, 41)
