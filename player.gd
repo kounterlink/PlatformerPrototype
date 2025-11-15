@@ -6,7 +6,7 @@ var state = States.IDLE
 
 @export var speed = 300
 @export var maxSpeed = 350
-var jumpVelocity = -700
+var jumpVelocity = -650
 @export var jumpLimit = 1
 const GRAVITY = 1200
 const MAX_GRAVITY = 1300
