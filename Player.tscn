@@ -3,18 +3,16 @@
 [ext_resource type="Script" uid="uid://bwacpnplkuslx" path="res://player.gd" id="1_kpjcp"]
 [ext_resource type="Texture2D" uid="uid://b684wq37whlcf" path="res://char.png" id="1_xhfnw"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_0e48y"]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_kpjcp"]
 radius = 15.0
 height = 62.0
 
-[node name="Player" type="Node2D"]
-
-[node name="CharacterBody2D" type="CharacterBody2D" parent="."]
+[node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_kpjcp")
 
-[node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
+[node name="Sprite2D" type="Sprite2D" parent="."]
 texture_filter = 1
 texture = ExtResource("1_xhfnw")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D"]
-shape = SubResource("CapsuleShape2D_0e48y")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CapsuleShape2D_kpjcp")
