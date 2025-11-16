@@ -16,10 +16,11 @@ var canRoll: bool
 # movement related variables
 
 @export var speed = 300
-@export var maxSpeed = 350
 @export var jumpVelocity = -650
 @export var jumpLimit = 1
-@export var rollSpeed = 200
+const BASE_ROLL_SPEED = 300
+const ARIAL_ROLL_SPEED = 350
+@export var rollSpeed = BASE_ROLL_SPEED
 @export var rollDuration = 0.5
 
 const GRAVITY = 1200
@@ -35,6 +36,9 @@ var coyoteTimer = COYOTE_TIME
 @onready var wallChecker: RayCast2D = $WallCheck
 
 var onWall = false
+var pounded = false
+var poundJumpCount = 0
+var poundJumpLimit = 1
 
 func _physics_process(delta):
 	var direction = Input.get_axis('LEFT', 'RIGHT')
@@ -61,6 +65,8 @@ func handleStates(delta):
 		jumpCount = 0
 		dynamicGravity = GRAVITY
 		coyoteTimer = COYOTE_TIME
+		pounded = false
+		poundJumpCount = 0
 
 	# state permissions
 	if (state == States.IDLE):
@@ -122,7 +128,7 @@ func handleStates(delta):
 		#print("ROLLING")
 		canWalk = false
 		canRun = false
-		canJump = false
+		canJump = true
 		canRoll = false
 		canPound = false
 
@@ -140,30 +146,35 @@ func movement(delta, direction):
 			if (state not in [States.JUMPING, States.FALLING]):
 				state = States.WALKING
 			# move in direction, flip sprite accordingly
-			velocity.x = move_toward(velocity.x, direction * speed, maxSpeed * delta)
+			velocity.x = move_toward(velocity.x, direction * speed, speed * 1.15 * delta)
 			sprite.flip_h = direction < 0
 		else:
 			if (state not in [States.JUMPING, States.FALLING]):
 				state = States.IDLE
 			# slow down
-			velocity.x = move_toward(velocity.x, 0, maxSpeed * 2.5 * delta)
+			velocity.x = move_toward(velocity.x, 0, speed * 1.15 * 2.5 * delta)
 
 func jump():
 	if (Input.is_action_just_pressed('JUMP')):
-		if (canJump and jumpCount < jumpLimit):
+		if ((canJump and jumpCount < jumpLimit) or (pounded and poundJumpCount 
+		< poundJumpLimit and state == States.ROLLING)):
 			coyoteTimer = 0
 			velocity.y = jumpVelocity
 			jumpCount += 1
 			state = States.JUMPING
+
+			if pounded:
+				poundJumpCount += 1
 	# cut jump short when button is released
 	if (Input.is_action_just_released('JUMP') and velocity.y < 0):
 		velocity.y = max(velocity.y, jumpVelocity * 0.4)
 
 func groundPound():
 	if (canPound and Input.is_action_just_pressed('DOWN')):
+		pounded = true
 		state = States.POUNDING
 		velocity.x = 0
-		velocity.y = abs(jumpVelocity) * 2
+		velocity.y = abs(jumpVelocity) * 1.5
 
 func roll():
 	if (canRoll):
@@ -172,6 +183,12 @@ func roll():
 				velocity.y = 0
 
 			state = States.ROLLING
+
+			if (is_on_floor()):
+				rollSpeed = BASE_ROLL_SPEED
+			else:
+				rollSpeed = ARIAL_ROLL_SPEED
+
 			var roll_direction = -1 if sprite.flip_h else 1
 			velocity.x += roll_direction * rollSpeed
 			await get_tree().create_timer(rollDuration).timeout
