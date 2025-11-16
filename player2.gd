@@ -2,7 +2,7 @@ extends CharacterBody2D
 
 # state related variables
 
-enum States {IDLE, WALKING, RUNNING, JUMPING, FALLING, ROLLING, POUNDING}
+enum States {IDLE, WALKING, WINDUP, RUNNING, JUMPING, FALLING, ROLLING, POUNDING}
 
 var state = States.IDLE
 
@@ -16,6 +16,8 @@ var canRoll: bool
 # movement related variables
 
 @export var speed = 300
+const MAX_RUN_SPEED = 500
+var runSpeed = 350
 @export var jumpVelocity = -650
 @export var jumpLimit = 1
 const BASE_ROLL_SPEED = 300
@@ -52,6 +54,7 @@ func _physics_process(delta):
 	handleStates(delta)
 	gravity(delta)
 	movement(delta, direction)
+	run(delta, direction)
 	jump()
 	groundPound()
 	roll()
@@ -67,6 +70,9 @@ func _physics_process(delta):
 func handleStates(delta):
 	# landing
 	if (is_on_floor() and state in [States.JUMPING, States.FALLING, States.POUNDING]):
+		if (state == States.POUNDING):
+			await get_tree().create_timer(0.1).timeout
+
 		state = States.IDLE
 		jumpCount = 0
 		dynamicGravity = GRAVITY
@@ -94,6 +100,9 @@ func handleStates(delta):
 		canJump = true
 		canRoll = true
 		canPound = false
+	elif (state == States.WINDUP):
+		animation.play('player_run')
+		print('windup')
 	elif (state == States.RUNNING):
 		#print("RUNNING")
 		canWalk = false
@@ -134,12 +143,13 @@ func handleStates(delta):
 		canWalk = false
 		canRun = false
 		canJump = false
-		canRoll = true
 		canPound = false
+		canRoll = true
 
 		if jumpChecker.is_colliding():
 			canJump = true
 			jumpCount = 0
+			canRoll = false
 	elif (state == States.ROLLING):
 		#print("ROLLING")
 		canWalk = false
@@ -151,7 +161,10 @@ func handleStates(delta):
 			canJump = false
 
 		canRoll = false
-		canPound = false
+		if (pounded):
+			canPound = false
+		else:
+			canPound = true
 
 	# change to falling
 	if (velocity.y > 0 and state not in [States.FALLING, States.POUNDING, States.ROLLING]):
@@ -174,6 +187,27 @@ func movement(delta, direction):
 				state = States.IDLE
 			# slow down
 			velocity.x = move_toward(velocity.x, 0, speed * 1.15 * 2.5 * delta)
+
+func run(delta, direction):
+	var holdingButton = Input.is_action_pressed('RUN')
+	if (canRun):
+		if (state == States.IDLE):
+			if (holdingButton):
+				state = States.WINDUP
+				runSpeed += 50 * delta
+
+				if (runSpeed >= MAX_RUN_SPEED and state == States.WINDUP):
+					runSpeed = MAX_RUN_SPEED
+					velocity.x += 500
+					await get_tree().create_timer(0.1).timeout
+					state = States.RUNNING
+		if (Input.is_action_just_released('RUN')):
+			state = States.IDLE
+			runSpeed = 350
+		if (state == States.RUNNING):
+			direction = 1 if not sprite.flip_h else -1
+			velocity.x = move_toward(velocity.x, direction * runSpeed, runSpeed * 1.25 * delta)
+			
 
 func jump():
 	if (Input.is_action_just_pressed('JUMP')):
