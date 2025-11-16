@@ -16,7 +16,7 @@ var canRoll: bool
 # movement related variables
 
 @export var speed = 300
-const MAX_RUN_SPEED = 500
+const MAX_RUN_SPEED = 1000
 var runSpeed = 350
 @export var jumpVelocity = -650
 @export var jumpLimit = 1
@@ -69,11 +69,11 @@ func _physics_process(delta):
 
 func handleStates(delta):
 	# landing
-	if (is_on_floor() and state in [States.JUMPING, States.FALLING, States.POUNDING]):
+	if (is_on_floor() and state in [States.JUMPING, States.FALLING, States.POUNDING, States.RUNNING]):
 		if (state == States.POUNDING):
 			await get_tree().create_timer(0.1).timeout
 
-		state = States.IDLE
+		state = States.IDLE if state != States.RUNNING else States.RUNNING
 		jumpCount = 0
 		dynamicGravity = GRAVITY
 		coyoteTimer = COYOTE_TIME
@@ -167,7 +167,7 @@ func handleStates(delta):
 			canPound = true
 
 	# change to falling
-	if (velocity.y > 0 and state not in [States.FALLING, States.POUNDING, States.ROLLING]):
+	if (velocity.y > 0 and state not in [States.FALLING, States.POUNDING, States.ROLLING, States.RUNNING]):
 		state = States.FALLING
 
 func gravity(delta):
@@ -194,19 +194,19 @@ func run(delta, direction):
 		if (state == States.IDLE):
 			if (holdingButton):
 				state = States.WINDUP
-				runSpeed += 50 * delta
+				runSpeed += MAX_RUN_SPEED / 2 * delta
 
 				if (runSpeed >= MAX_RUN_SPEED and state == States.WINDUP):
+					direction = 1 if not sprite.flip_h else -1
 					runSpeed = MAX_RUN_SPEED
-					velocity.x += 500
-					await get_tree().create_timer(0.1).timeout
 					state = States.RUNNING
-		if (Input.is_action_just_released('RUN')):
+		if (Input.is_action_just_released('RUN') and state == States.WINDUP):
 			state = States.IDLE
 			runSpeed = 350
 		if (state == States.RUNNING):
+			runSpeed = 350
 			direction = 1 if not sprite.flip_h else -1
-			velocity.x = move_toward(velocity.x, direction * runSpeed, runSpeed * 1.25 * delta)
+			velocity.x = MAX_RUN_SPEED * direction
 			
 
 func jump():
@@ -216,7 +216,7 @@ func jump():
 			coyoteTimer = 0
 			velocity.y = jumpVelocity
 			jumpCount += 1
-			state = States.JUMPING
+			state = States.JUMPING if state != States.RUNNING else States.RUNNING
 
 			if pounded:
 				poundJumpCount += 1
