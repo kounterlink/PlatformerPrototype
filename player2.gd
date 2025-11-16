@@ -34,11 +34,17 @@ var coyoteTimer = COYOTE_TIME
 @onready var sprite = $Sprite2D
 @onready var jumpChecker: RayCast2D = $JumpCheck
 @onready var wallChecker: RayCast2D = $WallCheck
+@onready var animation: AnimationPlayer = $AnimationPlayer
 
 var onWall = false
 var pounded = false
 var poundJumpCount = 0
 var poundJumpLimit = 1
+
+var rollQueued = false
+
+func _ready():
+	animation.play('player_idle')
 
 func _physics_process(delta):
 	var direction = Input.get_axis('LEFT', 'RIGHT')
@@ -71,6 +77,8 @@ func handleStates(delta):
 	# state permissions
 	if (state == States.IDLE):
 		#print("IDLE")
+		animation.play('player_idle')
+
 		canWalk = true
 		canRun = true
 		canJump = true
@@ -78,6 +86,8 @@ func handleStates(delta):
 		canRoll = true
 		canPound = false
 	elif (state == States.WALKING):
+		animation.play('player_walk')
+
 		#print("WALKING")
 		canWalk = true
 		canRun = true
@@ -93,6 +103,8 @@ func handleStates(delta):
 		canPound = false
 	elif (state == States.JUMPING):
 		#print("JUMPING")
+		animation.play('player_jump')
+
 		canWalk = true
 		canRun = true
 		canJump = false
@@ -100,6 +112,8 @@ func handleStates(delta):
 		canPound = true
 	elif (state == States.FALLING):
 		#print("FALLING")
+		animation.play('player_fall')
+
 		canWalk = true
 		canRun = true
 		if (coyoteTimer > 0):
@@ -115,6 +129,8 @@ func handleStates(delta):
 			jumpCount = 0
 	elif (state == States.POUNDING):
 		#print("POUNDING")
+		animation.play('player_pound')
+
 		canWalk = false
 		canRun = false
 		canJump = false
@@ -128,7 +144,12 @@ func handleStates(delta):
 		#print("ROLLING")
 		canWalk = false
 		canRun = false
-		canJump = true
+		if (is_on_floor()):
+			jumpCount = 0
+			canJump = true
+		else:
+			canJump = false
+
 		canRoll = false
 		canPound = false
 
@@ -184,6 +205,8 @@ func roll():
 
 			state = States.ROLLING
 
+			animation.play('player_roll_start')
+
 			if (is_on_floor()):
 				rollSpeed = BASE_ROLL_SPEED
 			else:
@@ -191,11 +214,15 @@ func roll():
 
 			var roll_direction = -1 if sprite.flip_h else 1
 			velocity.x += roll_direction * rollSpeed
+			await animation.animation_finished
+			animation.play('player_roll')
 			await get_tree().create_timer(rollDuration).timeout
 			if (is_on_floor()):
 				state = States.IDLE
+				
 			else:
 				state = States.FALLING
+			rollQueued = false
 
 func flipWallCheck():
 	if sprite.flip_h:
